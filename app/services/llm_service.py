@@ -70,7 +70,7 @@ def extract_entities(raw_text: str) -> Tuple[Dict, float]:
         
         # Create model with JSON-focused configuration
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name=settings.gemini_model_name,
             generation_config={
                 "temperature": 0.1,  # Low temperature for deterministic output
                 "top_p": 0.95,

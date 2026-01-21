@@ -164,7 +164,10 @@ def parse_date(
     Returns:
         Tuple of (parsed_date, is_relative)
     """
+    from datetime import timedelta
+    
     is_relative = False
+    date_lower = date_phrase.lower().strip()
     
     # Check for relative date indicators
     relative_indicators = [
@@ -173,37 +176,55 @@ def parse_date(
         "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
     ]
     
-    date_lower = date_phrase.lower()
     for indicator in relative_indicators:
         if indicator in date_lower:
             is_relative = True
             break
     
-    # Configure dateparser settings
+    # Weekday mapping
+    weekdays = {
+        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+        "friday": 4, "saturday": 5, "sunday": 6
+    }
+    
+    # Handle "next [weekday]" pattern manually (dateparser has issues with this)
+    for day_name, day_num in weekdays.items():
+        if day_name in date_lower:
+            # Check if "next" or "coming" is mentioned
+            if "next" in date_lower or "coming" in date_lower:
+                # Calculate next occurrence of this weekday
+                current_weekday = reference_date.weekday()
+                days_ahead = day_num - current_weekday
+                if days_ahead <= 0:  # Target day already happened this week or is today
+                    days_ahead += 7
+                target_date = reference_date + timedelta(days=days_ahead)
+                return target_date.date(), True
+            elif "this" in date_lower:
+                # This week's occurrence
+                current_weekday = reference_date.weekday()
+                days_ahead = day_num - current_weekday
+                if days_ahead < 0:  # Target day already happened this week
+                    days_ahead += 7
+                target_date = reference_date + timedelta(days=days_ahead)
+                return target_date.date(), True
+    
+    # Handle "today" and "tomorrow" explicitly
+    if "today" in date_lower:
+        return reference_date.date(), True
+    if "tomorrow" in date_lower:
+        return (reference_date + timedelta(days=1)).date(), True
+    if "yesterday" in date_lower:
+        return (reference_date - timedelta(days=1)).date(), True
+    
+    # Configure dateparser settings - use permissive settings for better parsing
     parser_settings = {
-        "TIMEZONE": str(tz),
-        "RETURN_AS_TIMEZONE_AWARE": True,
         "PREFER_DATES_FROM": "future",
         "RELATIVE_BASE": reference_date,
-        "STRICT_PARSING": True,
     }
     
     try:
-        # First try strict parsing
-        parsed = dateparser.parse(
-            date_phrase,
-            settings=parser_settings,
-            languages=["en"]
-        )
-        
-        if parsed is None:
-            # Try less strict parsing
-            parser_settings["STRICT_PARSING"] = False
-            parsed = dateparser.parse(
-                date_phrase,
-                settings=parser_settings,
-                languages=["en"]
-            )
+        # Try parsing with minimal constraints
+        parsed = dateparser.parse(date_phrase, settings=parser_settings)
         
         if parsed:
             return parsed.date(), is_relative
@@ -241,19 +262,14 @@ def parse_time(
         time_str = time_mappings[time_lower]
         return datetime.strptime(time_str, "%H:%M")
     
-    # Configure dateparser settings
+    # Configure dateparser settings - use minimal settings
     parser_settings = {
-        "TIMEZONE": str(tz),
-        "RETURN_AS_TIMEZONE_AWARE": True,
+        "PREFER_DATES_FROM": "future",
         "RELATIVE_BASE": reference_date,
     }
     
     try:
-        parsed = dateparser.parse(
-            time_phrase,
-            settings=parser_settings,
-            languages=["en"]
-        )
+        parsed = dateparser.parse(time_phrase, settings=parser_settings)
         
         if parsed:
             return parsed
