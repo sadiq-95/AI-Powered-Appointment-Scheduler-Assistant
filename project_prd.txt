@@ -1,0 +1,376 @@
+# Product Requirements Document (PRD)
+
+## Project Name
+
+**AI-Powered Appointment Scheduler Assistant (Backend Service)**
+
+---
+
+## 1. Context & Purpose
+
+Modern platforms receive appointment requests through unstructured channels: chat messages, emails, WhatsApp screenshots, handwritten notes, scanned forms. These inputs are noisy, inconsistent, and ambiguous. Manual processing does not scale.
+
+This project builds a **backend-only service** that converts **unstructured text or image inputs** into **validated, normalized appointment data** using OCR, entity extraction, and deterministic normalization, with explicit guardrails for uncertainty.
+
+This project is designed to demonstrate:
+
+* Backend engineering clarity
+* AI orchestration, not AI guessing
+* Robust error handling
+* Production-style API design
+* Deterministic outputs with confidence reporting
+
+This service does **not** schedule appointments. It only **parses and structures** requests.
+
+---
+
+## 2. Goals & Non-Goals
+
+### Goals
+
+* Accept text or image inputs
+* Extract appointment intent
+* Normalize date and time into ISO format
+* Enforce timezone: `Asia/Kolkata`
+* Return structured JSON outputs
+* Explicitly fail on ambiguity
+* Be deployable as a public backend API
+
+### Non-Goals
+
+* No frontend UI
+* No database persistence
+* No calendar booking integration
+* No user authentication
+* No real-time scheduling logic
+
+---
+
+## 3. Target Users (Technical)
+
+* Calendar automation systems
+* CRM intake pipelines
+* Hospital OPD booking services
+* Virtual assistant backends
+* Customer support automation
+
+---
+
+## 4. High-Level Workflow
+
+```
+Input (Text/Image)
+        ↓
+OCR / Text Extraction
+        ↓
+Entity Extraction (LLM)
+        ↓
+Normalization (Date/Time)
+        ↓
+Guardrails & Validation
+        ↓
+Final Structured Appointment JSON
+```
+
+Each stage is independently verifiable and returns confidence scores.
+
+---
+
+## 5. Functional Requirements
+
+### 5.1 Input Handling
+
+#### Supported Inputs
+
+* Raw text (JSON)
+* Image file (JPEG/PNG)
+
+#### API must accept:
+
+* Plain text appointment requests
+* Noisy OCR text from scanned notes or emails
+
+---
+
+### 5.2 Step 1: OCR / Text Extraction
+
+#### Input
+
+```json
+{
+  "input_type": "text",
+  "content": "Book dentist next Friday at 3pm"
+}
+```
+
+or
+
+```json
+{
+  "input_type": "image",
+  "content": "<uploaded image>"
+}
+```
+
+#### Output
+
+```json
+{
+  "raw_text": "Book dentist next Friday at 3pm",
+  "confidence": 0.90
+}
+```
+
+#### Requirements
+
+* OCR must correct minor errors where possible
+* Confidence can be heuristic-based
+* OCR failure must be handled cleanly
+
+---
+
+### 5.3 Step 2: Entity Extraction
+
+#### Entities to Extract
+
+* `date_phrase` (e.g., “next Friday”)
+* `time_phrase` (e.g., “3pm”)
+* `department` (e.g., “dentist”)
+
+#### Output
+
+```json
+{
+  "entities": {
+    "date_phrase": "next Friday",
+    "time_phrase": "3pm",
+    "department": "dentist"
+  },
+  "entities_confidence": 0.85
+}
+```
+
+#### Requirements
+
+* Gemini API used for extraction
+* LLM output must be constrained to JSON only
+* No inferred data allowed
+* Missing fields must be explicit
+
+---
+
+### 5.4 Step 3: Normalization
+
+#### Rules
+
+* Timezone: `Asia/Kolkata`
+* Convert natural language into ISO values
+* Resolve relative dates using current system date
+* Deterministic resolution only
+
+#### Output
+
+```json
+{
+  "normalized": {
+    "date": "2025-09-26",
+    "time": "15:00",
+    "tz": "Asia/Kolkata"
+  },
+  "normalization_confidence": 0.90
+}
+```
+
+#### Requirements
+
+* Use deterministic libraries for date parsing
+* No LLM guessing for dates
+* If multiple interpretations exist, fail
+
+---
+
+### 5.5 Guardrails & Exit Conditions
+
+#### Mandatory Fail Scenarios
+
+* Ambiguous date or time
+* Missing department
+* Multiple conflicting entities
+* OCR output too noisy
+
+#### Guardrail Response
+
+```json
+{
+  "status": "needs_clarification",
+  "message": "Ambiguous date/time or department"
+}
+```
+
+Guardrails are **not errors**, they are valid outputs.
+
+---
+
+### 5.6 Step 4: Final Appointment Output
+
+#### Output
+
+```json
+{
+  "appointment": {
+    "department": "Dentistry",
+    "date": "2025-09-26",
+    "time": "15:00",
+    "tz": "Asia/Kolkata"
+  },
+  "status": "ok"
+}
+```
+
+---
+
+## 6. API Design
+
+### Required Endpoints
+
+| Method | Endpoint     | Purpose                     |
+| ------ | ------------ | --------------------------- |
+| POST   | /parse       | OCR / text extraction       |
+| POST   | /extract     | Entity extraction           |
+| POST   | /normalize   | Date/time normalization     |
+| POST   | /appointment | Full pipeline orchestration |
+| GET    | /health      | Service health check        |
+
+---
+
+## 7. Non-Functional Requirements
+
+* All responses must be JSON
+* No stack traces exposed
+* Deterministic behavior
+* Clean error handling
+* FastAPI auto-docs enabled
+* Modular architecture
+
+---
+
+## 8. Tech Stack
+
+### Backend
+
+* Python 3.10+
+* FastAPI
+* Pydantic
+
+### OCR
+
+* Tesseract OCR via `pytesseract`
+* EasyOCR as optional fallback
+
+### LLM
+
+* **Gemini API**
+* JSON-constrained prompts only
+
+### Date Normalization
+
+* `dateparser` or `pendulum`
+
+### Hosting
+
+* Railway (recommended)
+* Alternative: Render / Fly.io
+
+---
+
+## 9. Deployment Requirements
+
+### Hosting
+
+* Single FastAPI service
+* Public URL
+* No auth required
+* Environment variables for API keys
+
+### Environment Variables
+
+```
+GEMINI_API_KEY=
+TZ=Asia/Kolkata
+```
+
+---
+
+## 10. Project File Structure
+
+```
+app/
+ ├── main.py
+ ├── config.py
+ ├── routes/
+ │    ├── parse.py
+ │    ├── extract.py
+ │    ├── normalize.py
+ │    └── appointment.py
+ ├── services/
+ │    ├── ocr_service.py
+ │    ├── llm_service.py
+ │    └── normalization_service.py
+ ├── schemas/
+ │    ├── input.py
+ │    └── output.py
+ ├── utils/
+ │    └── confidence.py
+ └── exceptions.py
+```
+
+---
+
+## 11. README.md Requirements
+
+The README **must include**:
+
+### Sections
+
+1. Project Overview
+2. Architecture Flow
+3. Tech Stack
+4. Setup Instructions
+5. Environment Variables
+6. API Usage Examples
+7. Sample curl Requests
+8. Guardrail Behavior
+9. Deployment Instructions
+10. Known Limitations
+
+---
+
+## 12. Evaluation Alignment Checklist
+
+This PRD ensures compliance with:
+
+* Correct JSON schemas
+* OCR handling
+* AI chaining
+* Guardrails
+* Clean backend architecture
+* Deployable demo
+
+---
+
+## 13. Key Engineering Principles
+
+* AI assists, never decides blindly
+* Failure is explicit, not hidden
+* Determinism over intelligence
+* APIs over demos
+* Clarity over cleverness
+
+---
+
+## 14. Success Criteria
+
+* All sample inputs produce expected outputs
+* Ambiguity returns guardrail JSON
+* Deployed URL works via curl/Postman
+* Code is readable without explanation
