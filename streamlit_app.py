@@ -103,6 +103,11 @@ def display_result(result: dict):
     elif status == "needs_clarification":
         st.warning(f"⚠️ Clarification Needed: {result.get('message', 'Please provide more details.')}")
         st.info("💡 **Tip**: Make sure to include the date, time, and type of appointment in your message.")
+        
+        # Show raw response for ambiguous inputs
+        with st.expander("📊 View Raw Response"):
+            display_result_data = {k: v for k, v in result.items() if v is not None}
+            st.json(display_result_data)
     else:
         st.error("❓ Unexpected Response")
         st.json(result)
