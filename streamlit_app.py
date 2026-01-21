@@ -6,7 +6,7 @@ import streamlit as st
 from datetime import datetime
 
 # Configuration
-API_BASE_URL = "http://127.0.0.1:8000"
+API_BASE_URL = "https://ai-powered-appointment-scheduler-hkbi.onrender.com"
 
 # Page configuration
 st.set_page_config(
