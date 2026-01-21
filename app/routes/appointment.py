@@ -40,6 +40,13 @@ async def create_appointment(data: AppointmentInput) -> AppointmentOutput:
         else:
             raw_text, ocr_confidence = extract_text_from_image(data.content)
         
+        # DEBUG: Print OCR output
+        print(f"\n{'='*50}")
+        print(f"[DEBUG] Stage 1 - OCR/Parse")
+        print(f"[DEBUG] Raw text: '{raw_text}'")
+        print(f"[DEBUG] OCR confidence: {ocr_confidence:.2f}")
+        print(f"{'='*50}")
+        
         # Check OCR confidence threshold
         if ocr_confidence < MIN_OCR_CONFIDENCE:
             return AppointmentOutput(
@@ -52,6 +59,13 @@ async def create_appointment(data: AppointmentInput) -> AppointmentOutput:
         from app.services.llm_service import extract_entities
         
         entities, extraction_confidence = extract_entities(raw_text)
+        
+        # DEBUG: Print entity extraction output
+        print(f"\n{'='*50}")
+        print(f"[DEBUG] Stage 2 - Entity Extraction")
+        print(f"[DEBUG] Entities: {entities}")
+        print(f"[DEBUG] Extraction confidence: {extraction_confidence:.2f}")
+        print(f"{'='*50}")
         
         # Check extraction confidence threshold
         if extraction_confidence < MIN_EXTRACTION_CONFIDENCE:
@@ -84,6 +98,15 @@ async def create_appointment(data: AppointmentInput) -> AppointmentOutput:
         # Stage 3: Normalization
         normalized, norm_confidence = normalize_datetime(date_phrase, time_phrase)
         
+        # DEBUG: Print normalization output
+        print(f"\n{'='*50}")
+        print(f"[DEBUG] Stage 3 - Normalization")
+        print(f"[DEBUG] Date phrase: '{date_phrase}'")
+        print(f"[DEBUG] Time phrase: '{time_phrase}'")
+        print(f"[DEBUG] Normalized: {normalized}")
+        print(f"[DEBUG] Normalization confidence: {norm_confidence:.2f}")
+        print(f"{'='*50}")
+        
         if normalized is None or normalized.get("date") is None or normalized.get("time") is None:
             return AppointmentOutput(
                 appointment=None,
@@ -93,6 +116,15 @@ async def create_appointment(data: AppointmentInput) -> AppointmentOutput:
         
         # Normalize department name
         normalized_department = normalize_department(department)
+        
+        # DEBUG: Print final output
+        print(f"\n{'='*50}")
+        print(f"[DEBUG] Stage 4 - Final Appointment")
+        print(f"[DEBUG] Department: {normalized_department}")
+        print(f"[DEBUG] Date: {normalized['date']}")
+        print(f"[DEBUG] Time: {normalized['time']}")
+        print(f"[DEBUG] Timezone: {normalized['tz']}")
+        print(f"{'='*50}\n")
         
         # Stage 4: Create appointment
         return AppointmentOutput(
