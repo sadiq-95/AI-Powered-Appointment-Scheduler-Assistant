@@ -289,6 +289,12 @@ app/
 │   └── output.py        # Response models
 └── utils/
     └── confidence.py    # Confidence scoring
+
 ```
+### LIVE DEPLOYMENT
 ## STREAMLIT LINK
 https://sadiq-95-ai-powered-appointment-scheduler--streamlit-app-odff4b.streamlit.app/
+## Backend (FastAPI on Render):  
+https://ai-powered-appointment-scheduler-hkbi.onrender.com/docs#/
+
+The Streamlit frontend sends requests to the backend APIs, which handle OCR/text parsing, entity extraction, normalization, and guardrail validation.
