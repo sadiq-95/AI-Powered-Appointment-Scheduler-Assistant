@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     gemini_api_key: str = ""
-    gemini_model_name: str = "gemini-2.5-flash-lite"
+    gemini_model_name: str = "gemini-1.5-flash"
     tz: str = "Asia/Kolkata"
     
     # Confidence thresholds
