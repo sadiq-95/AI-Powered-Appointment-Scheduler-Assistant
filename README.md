@@ -298,3 +298,6 @@ https://sadiq-95-ai-powered-appointment-scheduler--streamlit-app-odff4b.streamli
 https://ai-powered-appointment-scheduler-hkbi.onrender.com/docs#/
 
 The Streamlit frontend sends requests to the backend APIs, which handle OCR/text parsing, entity extraction, normalization, and guardrail validation.
+
+### DEMO VIDEO 
+https://drive.google.com/file/d/1DViLB3nv9y3IG__9WVEpBze5bHYptNLH/view?usp=sharing
