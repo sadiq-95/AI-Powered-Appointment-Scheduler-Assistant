@@ -68,15 +68,37 @@ def extract_entities(raw_text: str) -> Tuple[Dict, float]:
         # Configure the API
         genai.configure(api_key=settings.gemini_api_key)
         
-        # Create model with JSON-focused configuration
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model_name,
-            generation_config={
-                "temperature": 0.1,  # Low temperature for deterministic output
-                "top_p": 0.95,
-                "max_output_tokens": 500,
-            }
-        )
+        # Try the configured model, with fallback to other models
+        model_name = settings.gemini_model_name
+        fallback_models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"]
+        
+        # Ensure configured model is tried first, then fallbacks
+        models_to_try = [model_name] + [m for m in fallback_models if m != model_name]
+        
+        model = None
+        last_error = None
+        
+        for try_model in models_to_try:
+            try:
+                model = genai.GenerativeModel(
+                    model_name=try_model,
+                    generation_config={
+                        "temperature": 0.1,  # Low temperature for deterministic output
+                        "top_p": 0.95,
+                        "max_output_tokens": 500,
+                    }
+                )
+                # Test the model with a simple call
+                test_response = model.generate_content("test")
+                if test_response:
+                    break  # Model works, use it
+            except Exception as e:
+                last_error = e
+                model = None
+                continue
+        
+        if model is None:
+            raise LLMError(f"No available Gemini model found. Last error: {last_error}")
         
         # Generate response
         full_prompt = EXTRACTION_PROMPT + raw_text
